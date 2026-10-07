@@ -1,0 +1,32 @@
+// firestore.rules
+// ─────────────────────────────────────────────────────────────
+// Firestore Security Rules — deploy via Firebase CLI:
+//   firebase deploy --only firestore:rules
+// ─────────────────────────────────────────────────────────────
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Users ─────────────────────────────────────────────────
+    // Users can only read and write their own profile document.
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ── Expenses ──────────────────────────────────────────────
+    // Users can only access expenses that belong to them (user_id field).
+    match /expenses/{expenseId} {
+      allow read, update, delete: if request.auth != null
+        && resource.data.user_id == request.auth.uid;
+
+      allow create: if request.auth != null
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && request.resource.data.description is string
+        && request.resource.data.category is string;
+    }
+  }
+}
